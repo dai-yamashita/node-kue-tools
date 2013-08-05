@@ -12,6 +12,7 @@ program
 .option('-h, --host <string>' , 'Server hostname')
 .parse(process.argv);
 
+
 var state = program.state;
 if(!state){
     console.log("must provide state -s");
@@ -28,7 +29,13 @@ kue.redis.createClient = function(){ return redis.createClient(config.port, conf
 var q = kue.createQueue();
 var r = kue.redis.createClient();
 
-q[state].call(q,function(err,v){
+var queue = q[state];
+if(!queue){
+    console.log("Invalid state: " + state);
+    process.exit();
+}
+
+queue.call(q,function(err,v){
     if(err) throw err;
 
     var missing_job_ids    = [];
