@@ -1,0 +1,40 @@
+#!/usr/local/bin/node
+// -*-js3-*-
+
+var _       = require('lodash');
+var program = require('commander');
+var kue     = require('kue');
+var redis   = require('redis');
+
+program
+.option('-q, --queue <name of queue>', 'Name of the queue to count')
+.option('-s, --state <active|failed|complete>' , 'Which job state to act on'  )
+.option('-p, --port <int>' , 'Server port')
+.option('-h, --host <string>' , 'Server hostname')
+.parse(process.argv);
+
+if(!program.queue){
+    process.stderr.write("-q (queue) argument is required\n");
+    process.exit(1);
+}
+
+if(!program.state) program.state = "inactive";
+
+var config = {
+    host : program.host ? program.host : 'localhost'
+  , port : program.port ? program.port : 6379
+};
+
+kue.redis.createClient = function(){ return redis.createClient(config.port, config.host); };
+
+var q = kue.createQueue();
+
+kue.Job.rangeByType(program.queue,program.state,0,-1,"asc",function(err,jobs){
+  if(err) throw err;
+    _.forEach(jobs, function(job){
+        console.log('job_id: ' + job.id);
+        console.log(job.data);
+    });
+  //console.log(jobs);
+  process.exit();
+});
